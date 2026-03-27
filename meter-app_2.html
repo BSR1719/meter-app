@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f1923">
+<title>⚡ Meter Input</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0f1923; --surface:#172130; --card:#1e2d3d; --border:#2a3f52;
+  --accent:#00d4aa; --accent2:#0099ff; --warn:#ffaa00; --danger:#ff4466;
+  --text:#e8f0f8; --muted:#6b8299;
+  --mono:'IBM Plex Mono',monospace; --thai:'Noto Sans Thai',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--thai);overscroll-behavior:none;}
+#app{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto;}
+
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px 10px;flex-shrink:0;}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.logo{display:flex;align-items:center;gap:8px;}
+.logo-icon{width:28px;height:28px;border:1.5px solid var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;}
+.logo-text{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--accent);letter-spacing:.05em;}
+.date-chip{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--card);border:1px solid var(--border);border-radius:4px;padding:3px 8px;}
+.period-row{display:flex;gap:8px;}
+.period-row select{flex:1;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:13px;font-family:var(--thai);appearance:none;-webkit-appearance:none;cursor:pointer;}
+
+.progress-bar{height:2px;background:var(--border);flex-shrink:0;}
+.progress-fill{height:100%;background:var(--accent);transition:width .4s ease;}
+
+#scroll-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px;}
+
+.floor-section{margin-bottom:14px;}
+.floor-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px 8px 0 0;cursor:pointer;user-select:none;}
+.floor-label{display:flex;align-items:center;gap:8px;}
+.floor-badge{font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;letter-spacing:.05em;}
+.floor-name{font-size:13px;font-weight:500;}
+.done-count{font-family:var(--mono);font-size:11px;}
+.chevron{transition:transform .25s ease;}
+.chevron.open{transform:rotate(180deg);}
+.floor-body{background:var(--card);border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;overflow:hidden;}
+
+.meter-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);transition:background .15s;}
+.meter-row:last-child{border-bottom:none;}
+.meter-row.filled{background:rgba(0,212,170,.04);}
+.meter-id{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--muted);min-width:80px;flex-shrink:0;}
+.meter-input-wrap{flex:1;position:relative;}
+.meter-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:16px;font-weight:500;padding:8px 36px 8px 10px;text-align:right;-webkit-appearance:none;transition:border-color .2s,background .2s;}
+.meter-input:focus{outline:none;border-color:var(--accent);background:rgba(0,212,170,.05);}
+.meter-input.has-value{border-color:rgba(0,212,170,.4);}
+.meter-input::placeholder{color:var(--muted);font-size:13px;}
+.unit-badge{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:10px;color:var(--muted);pointer-events:none;}
+.meter-check{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.meter-check.done{background:var(--accent);border-color:var(--accent);}
+
+#numpad-overlay{display:none;position:fixed;inset:0;z-index:100;flex-direction:column;justify-content:flex-end;background:rgba(0,0,0,.7);}
+#numpad-overlay.active{display:flex;}
+.numpad-header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;}
+.numpad-meter-id{font-family:var(--mono);font-size:13px;color:var(--accent);}
+.numpad-display{font-family:var(--mono);font-size:28px;font-weight:600;color:var(--text);text-align:right;padding:0 4px;min-width:160px;}
+.cursor{animation:blink 1s step-end infinite;}
+@keyframes blink{50%{opacity:0;}}
+.numpad-grid{background:var(--surface);border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background-color:var(--border);}
+.np-btn{background:var(--card);border:none;color:var(--text);font-family:var(--mono);font-size:22px;font-weight:500;padding:18px;cursor:pointer;transition:background .1s;user-select:none;-webkit-user-select:none;}
+.np-btn:active{background:var(--border);}
+.np-btn.dot,.np-btn.del{font-size:16px;}
+.np-btn.del{color:var(--muted);}
+.np-btn.ok{background:var(--accent);color:#0f1923;font-size:15px;font-weight:600;letter-spacing:.05em;}
+.np-btn.ok:active{background:#00b891;}
+.np-btn.cancel{color:var(--muted);font-size:14px;}
+
+#bottom-bar{background:var(--surface);border-top:1px solid var(--border);padding:12px 16px;flex-shrink:0;}
+.summary-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.summary-stat{text-align:center;}
+.summary-stat .val{font-family:var(--mono);font-size:18px;font-weight:600;color:var(--accent);}
+.summary-stat .lbl{font-size:10px;color:var(--muted);margin-top:1px;}
+.divider-v{width:1px;height:32px;background:var(--border);}
+.btn-save{width:100%;padding:14px;border:none;border-radius:8px;background:var(--accent);color:#0f1923;font-family:var(--thai);font-size:15px;font-weight:600;cursor:pointer;transition:background .2s,transform .1s;}
+.btn-save:active{transform:scale(.98);background:#00b891;}
+.btn-save:disabled{background:var(--border);color:var(--muted);cursor:not-allowed;}
+
+#toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--accent);color:#0f1923;font-size:13px;font-weight:600;padding:10px 20px;border-radius:24px;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;white-space:nowrap;z-index:200;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+#success-screen{display:none;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:24px;text-align:center;}
+#success-screen.active{display:flex;}
+.success-icon{width:72px;height:72px;border-radius:50%;border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;margin-bottom:20px;animation:pulse-ring 2s infinite;}
+@keyframes pulse-ring{0%,100%{box-shadow:0 0 0 0 rgba(0,212,170,.3);}50%{box-shadow:0 0 0 12px rgba(0,212,170,0);}}
+.success-title{font-size:20px;font-weight:600;color:var(--accent);margin-bottom:8px;}
+.success-sub{font-size:13px;color:var(--muted);line-height:1.6;}
+.success-stats{margin:24px 0;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;width:100%;max-width:280px;}
+.success-stat-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.success-stat-row:last-child{border-bottom:none;}
+.success-stat-row span:first-child{color:var(--muted);}
+.success-stat-row span:last-child{font-family:var(--mono);font-weight:500;}
+.btn-reset{padding:12px 32px;border:1.5px solid var(--accent);border-radius:8px;background:transparent;color:var(--accent);font-size:14px;font-weight:500;cursor:pointer;font-family:var(--thai);}
+</style>
+</head>
+<body>
+<div id="app">
+
+<header>
+  <div class="header-top">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="#00d4aa" stroke-width="1.5" stroke-linecap="round">
+          <path d="M7 1v2M7 11v2M1 7h2M11 7h2M3 3l1.4 1.4M9.6 9.6L11 11M3 11l1.4-1.4M9.6 4.4L11 3"/>
+          <circle cx="7" cy="7" r="2.5"/>
+        </svg>
+      </div>
+      <span class="logo-text">METER INPUT</span>
+    </div>
+    <span class="date-chip" id="date-chip"></span>
+  </div>
+  <div class="period-row">
+    <select id="sel-month">
+      <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
+      <option value="3">มีนาคม</option><option value="4">เมษายน</option>
+      <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
+      <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
+      <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
+      <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
+    </select>
+    <select id="sel-year" style="max-width:90px;"></select>
+    <select id="sel-day" style="max-width:75px;"></select>
+  </div>
+</header>
+
+<div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+<div id="scroll-area"></div>
+
+<div id="success-screen">
+  <div class="success-icon">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#00d4aa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 16l7 7L26 9"/>
+    </svg>
+  </div>
+  <div class="success-title">บันทึกสำเร็จ!</div>
+  <div class="success-sub" id="success-sub"></div>
+  <div class="success-stats" id="success-stats"></div>
+  <button class="btn-reset" onclick="resetForm()">บันทึกวันถัดไป</button>
+</div>
+
+<div id="bottom-bar">
+  <div class="summary-row">
+    <div class="summary-stat"><div class="val" id="stat-filled">0</div><div class="lbl">กรอกแล้ว</div></div>
+    <div class="divider-v"></div>
+    <div class="summary-stat"><div class="val" id="stat-total">0</div><div class="lbl">ทั้งหมด</div></div>
+    <div class="divider-v"></div>
+    <div class="summary-stat"><div class="val" id="stat-kwh">0</div><div class="lbl">kWh รวม</div></div>
+  </div>
+  <button class="btn-save" id="btn-save" disabled onclick="saveData()">บันทึกลง Google Sheets</button>
+</div>
+</div>
+
+<div id="numpad-overlay">
+  <div class="numpad-header">
+    <span class="numpad-meter-id" id="np-label">—</span>
+    <span class="numpad-display"><span id="np-display">0</span><span class="cursor">|</span></span>
+  </div>
+  <div class="numpad-grid">
+    <button class="np-btn" onclick="npInput('7')">7</button>
+    <button class="np-btn" onclick="npInput('8')">8</button>
+    <button class="np-btn" onclick="npInput('9')">9</button>
+    <button class="np-btn" onclick="npInput('4')">4</button>
+    <button class="np-btn" onclick="npInput('5')">5</button>
+    <button class="np-btn" onclick="npInput('6')">6</button>
+    <button class="np-btn" onclick="npInput('1')">1</button>
+    <button class="np-btn" onclick="npInput('2')">2</button>
+    <button class="np-btn" onclick="npInput('3')">3</button>
+    <button class="np-btn cancel" onclick="npCancel()">ยกเลิก</button>
+    <button class="np-btn" onclick="npInput('0')">0</button>
+    <button class="np-btn dot" onclick="npInput('.')">.</button>
+    <button class="np-btn del" onclick="npDelete()">⌫</button>
+    <button class="np-btn ok" onclick="npConfirm()">ตกลง</button>
+    <button class="np-btn" onclick="npInput('00')">00</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+// CONFIG — ใส่ URL จาก Apps Script Deploy ที่นี่
+// ══════════════════════════════════════════════
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyQx6cdOlBLs8ZS39rD67-vrMdQj7p_FqPfRUrV7dDZvv6Iv2OkYbXW-uWfoVSf9aYv7w/exec';
+
+// ══════════════════════════════════════════════
+// FLOOR DATA — ตรงกับ Excel จริงทุก sheet/meter
+// key ตรงกับ METER_COLS ใน sheets-api.gs
+// ══════════════════════════════════════════════
+const FLOORS = [
+  { id:'G',    label:'Ground Floor',        meters:['BD1'],                              color:'#0099ff' },
+  { id:'1',    label:'ชั้น 1 — OPD / ER',   meters:['GD1','GD2','GD3'],                  color:'#7b61ff' },
+  { id:'2',    label:'ชั้น 2 — ICU / OBG',  meters:['2ND1','2ND2','2D1','2D2','2UD1'],   color:'#ff6b9d' },
+  { id:'3',    label:'ชั้น 3 — Ward 3',     meters:['3ND1','3D1','3D2','3DL1','MainNeg'],           color:'#ff9500' },
+  { id:'4old', label:'ชั้น 4 — โซนเก่า',    meters:['4ND1','4D1'],                        color:'#34c759' },
+  { id:'4new', label:'ชั้น 4 — โซนใหม่',    meters:['4ND1','4D1'],                        color:'#30d158' },
+  { id:'5old', label:'ชั้น 5 — โซนเก่า',    meters:['5ND1','5D1','AMCC','EAMCC'],                        color:'#00d4aa' },
+  { id:'5new', label:'ชั้น 5 — โซนใหม่',    meters:['5ND1','5D1'],                        color:'#00c7be' },
+  { id:'6',    label:'ชั้น 6',               meters:['6ND1','6D1'],                        color:'#ffd60a' },
+  { id:'7',    label:'ชั้น 7',               meters:['7ND1','7D1'],                        color:'#ff9f0a' },
+  { id:'8',    label:'ชั้น 8',               meters:['8ND1','8D1'],                        color:'#ff6961' },
+  { id:'9',    label:'ชั้น 9',               meters:['9ND1','9D1'],                        color:'#bf5af2' },
+  { id:'10',   label:'ชั้น 10',              meters:['10ND1','10D1','10DLF'],              color:'#ff375f' },
+];
+
+let values = {};
+let activeKey = null;
+let npValue = '';
+
+function init() {
+  const now = new Date();
+  document.getElementById('date-chip').textContent =
+    now.toLocaleDateString('th-TH',{weekday:'short',day:'numeric',month:'short'});
+  document.getElementById('sel-month').value = now.getMonth()+1;
+  const ys = document.getElementById('sel-year');
+  for(let y=now.getFullYear()-1;y<=now.getFullYear()+1;y++){
+    const o=document.createElement('option');
+    o.value=y; o.textContent=y+543;
+    if(y===now.getFullYear())o.selected=true;
+    ys.appendChild(o);
+  }
+  const ds = document.getElementById('sel-day');
+  for(let d=1;d<=31;d++){
+    const o=document.createElement('option');
+    o.value=d; o.textContent='วันที่ '+d;
+    if(d===now.getDate())o.selected=true;
+    ds.appendChild(o);
+  }
+  buildUI(); updateStats();
+}
+
+function buildUI() {
+  const area = document.getElementById('scroll-area');
+  area.innerHTML = '';
+  FLOORS.forEach(floor => {
+    const sec = document.createElement('div');
+    sec.className='floor-section'; sec.id=`sec-${floor.id}`;
+    const hdr = document.createElement('div');
+    hdr.className='floor-header';
+    hdr.style.cssText=`background:${floor.color}18;border:1px solid ${floor.color}44;border-radius:8px 8px 0 0;`;
+    hdr.innerHTML=`
+      <div class="floor-label">
+        <span class="floor-badge" style="background:${floor.color}22;color:${floor.color}">Fl.${floor.id}</span>
+        <span class="floor-name">${floor.label}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="done-count" id="done-${floor.id}" style="color:${floor.color}">0/${floor.meters.length}</span>
+        <svg class="chevron open" id="chev-${floor.id}" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="${floor.color}" stroke-width="1.5" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+      </div>`;
+    hdr.onclick=()=>toggleFloor(floor.id);
+    const body=document.createElement('div');
+    body.className='floor-body'; body.id=`body-${floor.id}`;
+    floor.meters.forEach(mid=>{
+      const key=`${floor.id}-${mid}`;
+      const row=document.createElement('div');
+      row.className='meter-row'; row.id=`row-${key}`;
+      row.innerHTML=`
+        <span class="meter-id">${mid}</span>
+        <div class="meter-input-wrap">
+          <input class="meter-input" id="inp-${key}" type="text" inputmode="none"
+            placeholder="กดเพื่อกรอก" readonly
+            onclick="openNumpad('${key}','${mid} — Fl.${floor.id}')">
+          <span class="unit-badge">kWh</span>
+        </div>
+        <div class="meter-check" id="chk-${key}">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#0f1923" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:none" id="chk-svg-${key}"><path d="M1.5 5l2.5 2.5 4.5-4.5"/></svg>
+        </div>`;
+      body.appendChild(row);
+    });
+    sec.appendChild(hdr); sec.appendChild(body); area.appendChild(sec);
+  });
+}
+
+function toggleFloor(fid){
+  const b=document.getElementById(`body-${fid}`),c=document.getElementById(`chev-${fid}`);
+  b.style.display=b.style.display==='none'?'block':'none';
+  c.classList.toggle('open',b.style.display!=='none');
+}
+
+function openNumpad(key,label){
+  activeKey=key; npValue=values[key]||'';
+  document.getElementById('np-label').textContent=label;
+  updateNpDisplay();
+  document.getElementById('numpad-overlay').classList.add('active');
+  document.body.style.overflow='hidden';
+}
+function updateNpDisplay(){document.getElementById('np-display').textContent=npValue||'0';}
+function npInput(ch){if(ch==='.'&&npValue.includes('.'))return;if(npValue==='0'&&ch!=='.')npValue=ch;else npValue+=ch;updateNpDisplay();}
+function npDelete(){npValue=npValue.slice(0,-1);updateNpDisplay();}
+function npCancel(){document.getElementById('numpad-overlay').classList.remove('active');document.body.style.overflow='';activeKey=null;}
+function npConfirm(){
+  if(activeKey&&npValue!==''){
+    values[activeKey]=npValue;
+    const inp=document.getElementById(`inp-${activeKey}`);
+    const chk=document.getElementById(`chk-${activeKey}`);
+    const svg=document.getElementById(`chk-svg-${activeKey}`);
+    const row=document.getElementById(`row-${activeKey}`);
+    if(inp){inp.value=parseFloat(npValue).toLocaleString('th-TH',{maximumFractionDigits:1});inp.classList.add('has-value');}
+    if(chk){chk.style.background='#00d4aa';chk.style.borderColor='#00d4aa';}
+    if(svg)svg.style.display='block';
+    if(row)row.classList.add('filled');
+    updateStats(); updateFloorDone();
+  }
+  npCancel();
+}
+
+function updateStats(){
+  const total=FLOORS.reduce((s,f)=>s+f.meters.length,0);
+  const filled=Object.keys(values).filter(k=>values[k]!=='').length;
+  const kwh=Object.values(values).reduce((s,v)=>s+(parseFloat(v)||0),0);
+  document.getElementById('stat-filled').textContent=filled;
+  document.getElementById('stat-total').textContent=total;
+  document.getElementById('stat-kwh').textContent=kwh>0?kwh.toLocaleString('th-TH',{maximumFractionDigits:1}):'0';
+  document.getElementById('progress-fill').style.width=(total>0?filled/total*100:0)+'%';
+  const btn=document.getElementById('btn-save');
+  btn.disabled=filled===0;
+  btn.textContent=filled===total?`บันทึกทั้งหมด ${filled} มิเตอร์`:`บันทึก ${filled}/${total} มิเตอร์`;
+}
+function updateFloorDone(){
+  FLOORS.forEach(f=>{
+    const done=f.meters.filter(m=>values[`${f.id}-${m}`]).length;
+    const el=document.getElementById(`done-${f.id}`);
+    if(el)el.textContent=`${done}/${f.meters.length}`;
+  });
+}
+
+async function saveData(){
+  const btn=document.getElementById('btn-save');
+  btn.disabled=true; btn.textContent='กำลังบันทึก...';
+  const day=document.getElementById('sel-day').value;
+  const month=document.getElementById('sel-month').value;
+  const year=document.getElementById('sel-year').value;
+  const payload={day,month,year,date:`${day}/${month}/${year}`,meters:{}};
+  FLOORS.forEach(f=>f.meters.forEach(m=>{
+    const key=`${f.id}-${m}`;
+    payload.meters[key]=parseFloat(values[key])||0;
+  }));
+  if(SHEETS_URL==='YOUR_GOOGLE_APPS_SCRIPT_URL_HERE'){showSuccess(payload,true);return;}
+  try{
+    await fetch(SHEETS_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),mode:'no-cors'});
+    showSuccess(payload,false);
+  }catch(e){
+    btn.disabled=false; btn.textContent='บันทึกลง Google Sheets';
+    showToast('เกิดข้อผิดพลาด — ตรวจสอบ internet');
+  }
+}
+
+function showSuccess(payload,demo){
+  document.getElementById('scroll-area').style.display='none';
+  document.getElementById('bottom-bar').style.display='none';
+  document.getElementById('success-screen').classList.add('active');
+  const filled=Object.values(payload.meters).filter(v=>v>0).length;
+  const total=FLOORS.reduce((s,f)=>s+f.meters.length,0);
+  const kwh=Object.values(payload.meters).reduce((s,v)=>s+v,0);
+  document.getElementById('success-sub').innerHTML=demo
+    ?'<span style="color:var(--warn)">⚠ Demo Mode — ยังไม่ได้ตั้งค่า SHEETS_URL</span><br>ดูคู่มือขั้นตอนที่ 6'
+    :`บันทึกวันที่ ${payload.date} เรียบร้อย`;
+  document.getElementById('success-stats').innerHTML=`
+    <div class="success-stat-row"><span>มิเตอร์ที่กรอก</span><span>${filled}/${total}</span></div>
+    <div class="success-stat-row"><span>พลังงานรวม</span><span>${kwh.toLocaleString('th-TH',{maximumFractionDigits:1})} kWh</span></div>
+    <div class="success-stat-row"><span>วันที่</span><span>${payload.date}</span></div>
+    ${demo?'<div class="success-stat-row" style="color:var(--warn)"><span>สถานะ</span><span>Demo (ยังไม่บันทึก)</span></div>':''}`;
+}
+function resetForm(){
+  values={};
+  document.getElementById('success-screen').classList.remove('active');
+  document.getElementById('scroll-area').style.display='block';
+  document.getElementById('bottom-bar').style.display='block';
+  buildUI(); updateStats();
+}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')npCancel();});
+init();
+</script>
+</body>
+</html>
